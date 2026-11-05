@@ -53,10 +53,12 @@
               pkgs.makeWrapper
             ];
 
-            # Next.js telemetry off & build production standalone
+            dontNpmPrune = true;
+            npmFlags = [ "--legacy-peer-deps" ];
+
+            # Next.js telemetry off
             env = {
               NEXT_TELEMETRY_DISABLED = "1";
-              NODE_ENV = "production";
             };
 
             buildPhase = ''
