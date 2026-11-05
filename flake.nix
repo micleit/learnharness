@@ -71,7 +71,7 @@
             installPhase = ''
               runHook preInstall
               mkdir -p $out/lib/learnharness $out/bin
-              cp -r .next/standalone/* $out/lib/learnharness/
+              cp -r .next/standalone/. $out/lib/learnharness/
               makeWrapper ${nodejs}/bin/node $out/bin/learnharness \
                 --add-flags "$out/lib/learnharness/server.js"
               runHook postInstall

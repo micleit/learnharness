@@ -105,6 +105,7 @@ in
 
       serviceConfig = {
         ExecStart = "${cfg.package}/bin/learnharness";
+        WorkingDirectory = "${cfg.package}/lib/learnharness";
         Restart = "always";
         RestartSec = "5s";
         User = cfg.user;
