@@ -310,7 +310,9 @@ export function createProberTools(
 	// differently-typed literals makes the whole object's type a union —
 	// unusable as Record<string, AgentTool<any>> downstream).
 	const quizzing: Record<string, AgentTool<any>> =
-		mechanics === "free" ? { recall: probeExplainTool } : { probe: probeQuizTool };
+		mechanics === "free"
+			? { recall: probeExplainTool, explain: probeExplainTool }
+			: { probe: probeQuizTool, quiz: probeQuizTool };
 	// healToolRecord (owner, 2026-10-09 — the whitehead generalization):
 	// the standard argument heal over the WHOLE registry — every tool,
 	// not just the one the latest wobble incident landed on.
@@ -384,6 +386,31 @@ export function teachQuizToolFor(ctx: Pick<PlanToolContext, "chatId" | "chatStor
 			const problems = [...quizInputProblems(input)];
 			const nodeIdProblemText = nodeIdProblem(ctx, input.nodeId);
 			if (nodeIdProblemText) problems.push(nodeIdProblemText);
+
+			// HARD REPETITION GUARD: Reject exact or near-identical questions repeated in the same chat
+			const record = ctx.chatStore.getChat(ctx.chatId);
+			if (record && input.question) {
+				const normalizeQ = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+				const currentNorm = normalizeQ(input.question);
+				const hasDuplicate = record.messages.some((m) => {
+					if (m.role !== "assistant" || !Array.isArray(m.content)) return false;
+					return m.content.some((c) => {
+						if (c.type !== "toolCall" || (c.name !== "quiz" && c.name !== "probe")) return false;
+						const prevQ = (c.arguments as { question?: string } | undefined)?.question;
+						if (!prevQ) return false;
+						const prevNorm = normalizeQ(prevQ);
+						// Match if normalized strings are identical or either contains the other when >= 20 chars
+						return prevNorm === currentNorm ||
+							(currentNorm.length >= 20 && prevNorm.length >= 20 && (currentNorm.includes(prevNorm) || prevNorm.includes(currentNorm)));
+					});
+				});
+				if (hasDuplicate) {
+					problems.push(
+						`This question (or one essentially identical to it) was ALREADY asked in this session. NEVER repeat questions. Ask a fresh question that builds forward to the next concept or application.`,
+					);
+				}
+			}
+
 			if (problems.length > 0) return invalidInputResult("quiz", problems);
 			return questionResult();
 		},
@@ -442,7 +469,9 @@ export function createTeacherTools(
 	// Same widening as the prober's (see above) — the conditional spread of
 	// two differently-typed literals collapses into an unusable union type.
 	const quizzing: Record<string, AgentTool<any>> =
-		mechanics === "free" ? { explain: teachExplainToolFor(ctx) } : { quiz: teachQuizToolFor(ctx) };
+		mechanics === "free"
+			? { explain: teachExplainToolFor(ctx), recall: teachExplainToolFor(ctx) }
+			: { quiz: teachQuizToolFor(ctx), probe: teachQuizToolFor(ctx) };
 	// healToolRecord — same standard as the prober's registry (above).
 	return healToolRecord(
 		filterEnabledTools(

@@ -1,4 +1,5 @@
 import * as fs from "node:fs/promises";
+import * as nodeFs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -40,7 +41,13 @@ const EXCLUDED_DIR_NAMES = new Set(["node_modules", ".git", "Library", ".Trash"]
  *  learner's life, so the home directory is the anchor.) */
 export function resolveSourcePath(p?: string): string {
 	if (!p) return os.homedir();
-	return path.isAbsolute(p) ? p : path.join(os.homedir(), p);
+	const resolved = path.isAbsolute(p) ? p : path.join(os.homedir(), p);
+	if (nodeFs.existsSync(resolved)) return resolved;
+	const dir = path.dirname(resolved);
+	const base = path.basename(resolved);
+	const inPdfs = path.join(dir, "PDFs", base);
+	if (nodeFs.existsSync(inPdfs)) return inPdfs;
+	return resolved;
 }
 
 /** pi's formatSize idiom (50KB prints as "50.0KB"). */

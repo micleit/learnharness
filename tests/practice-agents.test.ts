@@ -135,6 +135,16 @@ describe("the practice tool gating law", () => {
 		const greedy = await tools.problem.execute("call_p3", PROBLEM_INPUT as never);
 		assert.equal(greedy.isError, true, "the gate re-arms on the successful pose");
 	});
+
+	it("cannot conclude a problem in the same turn it was posed", async () => {
+		const gate = createPracticeGate(ctxOf([]));
+		const tools = { problem: problemTool(gate), conclude: concludeTool(gate) };
+		const pose = await tools.problem.execute("call_p1", PROBLEM_INPUT as never);
+		assert.equal(pose.isError, undefined);
+		const prematureConclude = await tools.conclude.execute("call_c1", CONCLUDE_INPUT as never);
+		assert.equal(prematureConclude.isError, true);
+		assert.match((prematureConclude.details as { problems: string[] }).problems[0] ?? "", /cannot conclude a problem in the same turn it was posed/);
+	});
 });
 
 // ── target validation (the mastery-trace contract, owner round 9) ──────────

@@ -4,6 +4,7 @@ These govern `type: "check"` questions (and explain). Predictions have their own
 
 Every check exists to answer one question: did the idea actually **take** — not whether he can read it back. The principles:
 
+- **Never repeat or re-probe what was already answered.** Check the transcript and probe assessment first. If a fact, formula, definition, or distinction (e.g. MSE vs MAE) was already correctly identified by the learner earlier in the session, NEVER ask about it again — neither as a prediction nor as a check. Doing so wastes the learner's time and stalls momentum. Build forward from what they know.
 - **Answerable by reasoning from the session.** Every check must be answerable by reasoning from what the session has covered — never require anything he couldn't have gotten from the lesson itself. A check he has no route to is not a check, it's a coin flip.
 - **Never just reciting your words back.** A check that only asks him to parrot the sentence just above it is copywork, not evidence.
 - **Prefer problems that apply the knowledge.** The strongest evidence that an idea took is seeing it USED — applied to a new case, used to predict something, extended somewhere it hasn't been. Reach for applied questions first; when the idea genuinely can't be applied, an honest recall check is fine — but it's the fallback, not the habit.

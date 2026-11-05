@@ -89,18 +89,33 @@ export function parseMermaidPlan(mermaid: string): PlanParseResult {
 	}
 
 	const nodes = new Map<string, string>(); // id → title (first label wins)
+	const idMap = new Map<string, string>(); // raw id -> healed slug
 	const edges: PlanEdge[] = [];
 	const seenEdges = new Set<string>();
 
-	const register = ({ id, label }: Endpoint, lineNo: number): void => {
-		if (!SLUG_RE.test(id)) {
+	const register = ({ id, label }: Endpoint, lineNo: number): string | null => {
+		let finalId = idMap.get(id);
+		if (!finalId) {
+			if (SLUG_RE.test(id)) {
+				finalId = id;
+			} else if (label && label.length > 0) {
+				const autoSlug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+				if (SLUG_RE.test(autoSlug)) finalId = autoSlug;
+			} else {
+				const autoSlug = id.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+				if (SLUG_RE.test(autoSlug)) finalId = autoSlug;
+			}
+		}
+		if (!finalId || !SLUG_RE.test(finalId)) {
 			problems.push(
 				`line ${lineNo}: node id \`${id}\` must be a lowercase slug (a-z, 0-9, joined by hyphens or underscores — e.g. \`chain-rule-intuition\`); ids are permanent and checks reference them.`,
 			);
-			return;
+			return null;
 		}
-		if (!nodes.has(id)) nodes.set(id, label && label.length > 0 ? label : id);
-		else if (label && label.length > 0 && nodes.get(id) === id) nodes.set(id, label);
+		idMap.set(id, finalId);
+		if (!nodes.has(finalId)) nodes.set(finalId, label && label.length > 0 ? label : finalId);
+		else if (label && label.length > 0 && nodes.get(finalId) === finalId) nodes.set(finalId, label);
+		return finalId;
 	};
 
 	for (let i = first + 1; i < lines.length; i++) {
@@ -126,18 +141,19 @@ export function parseMermaidPlan(mermaid: string): PlanParseResult {
 				endpoints.push(ep);
 			}
 			if (!unreadable) {
-				for (const ep of endpoints) register(ep, no);
-				for (let k = 0; k + 1 < endpoints.length; k++) {
-					const from = endpoints[k]!;
-					const to = endpoints[k + 1]!;
-					if (from.id === to.id) {
-						problems.push(`line ${no}: self-loop \`${from.id} --> ${to.id}\` — a node can't require itself.`);
+				const registeredIds = endpoints.map(ep => register(ep, no));
+				if (registeredIds.some(id => id === null)) continue;
+				for (let k = 0; k + 1 < registeredIds.length; k++) {
+					const fromId = registeredIds[k]!;
+					const toId = registeredIds[k + 1]!;
+					if (fromId === toId) {
+						problems.push(`line ${no}: self-loop \`${fromId} --> ${toId}\` — a node can't require itself.`);
 						continue;
 					}
-					const key = `${from.id}->${to.id}`;
+					const key = `${fromId}->${toId}`;
 					if (!seenEdges.has(key)) {
 						seenEdges.add(key);
-						edges.push({ from: from.id, to: to.id });
+						edges.push({ from: fromId, to: toId });
 					}
 				}
 			}

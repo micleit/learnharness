@@ -14,24 +14,22 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { createExtractionPipeline } from "../src/agent/subagents/extraction.ts";
+import { extraction } from "../src/server/index.ts";
 import { getGraph } from "../src/core/graph.ts";
-import { effectiveSettings, stores } from "../src/server/stores.ts";
+import { stores } from "../src/server/stores.ts";
+import "../src/server/web-subscriptions.ts";
+import { refreshSubscriptionModels } from "../src/agent/subscription-bridge.ts";
 
 async function main() {
+	await refreshSubscriptionModels();
 	const dir = process.argv[2] ?? "real-data-extraction/learn-sessions";
 	const limit = Number(process.argv[3] ?? 4);
-	const files = fs
-		.readdirSync(dir)
+	const files = (fs.readdirSync(dir, { recursive: true }) as string[])
 		.filter((f) => f.endsWith(".md") || f.endsWith(".markdown") || f.endsWith(".txt"))
 		.sort();
 	console.log(`[import-notes] ${files.length} note files from ${dir} (concurrency ${limit})`);
 
-	const pipeline = createExtractionPipeline({
-		...stores,
-		// Live budget: the graph section's setting, same as the app's trigger
-		getChunkTokens: () => effectiveSettings().graph.extractionChunkTokens,
-	});
+	const pipeline = extraction;
 	const queue = [...files];
 	const totals = { nodes: 0, chains: 0, failed: 0 };
 	const workers = Array.from({ length: Math.min(limit, files.length) }, async () => {

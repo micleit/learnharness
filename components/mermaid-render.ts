@@ -30,13 +30,23 @@ export const mermaidTheme: MermaidConfig = {
 	theme: "dark",
 };
 
+export function getMermaidConfig(isLight = false): MermaidConfig {
+	return {
+		fontFamily: "ui-sans-serif, system-ui, sans-serif",
+		fontSize: MERMAID_FONT_SIZE,
+		securityLevel: "strict",
+		theme: isLight ? "neutral" : "dark",
+	};
+}
+
 const plugin = createMermaidPlugin();
 
 /** Render one chart source to an svg string. The id is unique per call —
  *  mermaid caches rendered ids, and a repeated id across charts/renders
  *  returns the stale svg (the bug streamdown's own id minting avoids). */
 export async function renderMermaid(chart: string): Promise<string> {
+	const isLight = typeof document !== "undefined" && document.documentElement.classList.contains("light");
 	const id = `lh-mermaid-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
-	const { svg } = await plugin.getMermaid(mermaidTheme).render(id, chart);
+	const { svg } = await plugin.getMermaid(getMermaidConfig(isLight)).render(id, chart);
 	return svg;
 }

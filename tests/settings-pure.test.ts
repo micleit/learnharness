@@ -35,10 +35,26 @@ describe("resolveAppearance — delta over factory", () => {
 	});
 
 	it("explicit deltas win field-by-field", () => {
-		const a = resolveAppearance({ proseFontSize: 20, fontFamily: "Iowan Old Style" });
+		const a = resolveAppearance({ proseFontSize: 20, fontFamily: "Iowan Old Style", mode: "light" });
 		assert.equal(a.proseFontSize, 20);
 		assert.equal(a.fontFamily, "Iowan Old Style");
+		assert.equal(a.mode, "light");
 		assert.equal(a.background, null);
+	});
+
+	it("dark background in light mode drops to null (prevents dark flash)", () => {
+		const a = resolveAppearance({ mode: "light", background: "#000000" });
+		assert.equal(a.background, null);
+	});
+
+	it("light background in dark mode drops to null", () => {
+		const a = resolveAppearance({ mode: "dark", background: "#ffffff" });
+		assert.equal(a.background, null);
+	});
+
+	it("valid custom light background in light mode applies", () => {
+		const a = resolveAppearance({ mode: "light", background: "#f2e5bc" });
+		assert.equal(a.background, "#f2e5bc");
 	});
 });
 
@@ -55,6 +71,28 @@ describe("derivedPalette — the dark curve keeps today's relationships", () => 
 			"--input": "#434343",
 			"--primary-foreground": "#141414",
 		});
+	});
+
+	it("the factory light background reproduces Gruvbox Material Light palette EXACTLY", () => {
+		assert.deepEqual(derivedPalette("#fbf1c7", "light"), {
+			"--background": "#fbf1c7",
+			"--card": "#f2e5bc",
+			"--popover": "#f2e5bc",
+			"--secondary": "#f2e5bc",
+			"--muted": "#f2e5bc",
+			"--accent": "#e5d5ad",
+			"--border": "#d5c4a1",
+			"--input": "#d5c4a1",
+			"--primary-foreground": "#fbf1c7",
+		});
+	});
+
+	it("an off-factory background in light mode shifts surfaces downward", () => {
+		const p = derivedPalette("#ffffff", "light");
+		assert.equal(p["--background"], "#ffffff");
+		assert.equal(p["--card"], "#f5f5f5"); // 255 - 10 per channel
+		assert.equal(p["--accent"], "#e7e7e7"); // 255 - 24 per channel
+		assert.equal(p["--border"], "#d7d7d7"); // 255 - 40 per channel
 	});
 
 	it("an off-factory background shifts every surface with it (clamped at 255)", () => {

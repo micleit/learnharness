@@ -87,6 +87,8 @@ const CHROME_CANDIDATES = [
 	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 	"/Applications/Chromium.app/Contents/MacOS/Chromium",
 	"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+	"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+	"/Applications/Arc.app/Contents/MacOS/Arc",
 	"/usr/bin/google-chrome",
 	"/usr/bin/google-chrome-stable",
 	"/usr/bin/chromium",
@@ -174,10 +176,11 @@ async function connectBrowserService(): Promise<import("puppeteer-core").Browser
 		if (!binary) return null;
 		// Packaged: execPath runs the bundled app (flag reaches main.cjs).
 		// Dev: the bare electron binary needs the repo root as the app arg —
-		// flagless it would open Electron's default app instead of our shell.
+		const repoRoot = fs.existsSync(path.join(process.cwd(), "main.cjs"))
+			? process.cwd()
+			: path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 		const appArgs = process.versions.electron ? ["--browser-service"] : [
-			// src/agent/subagents → repo root
-			path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".."),
+			repoRoot,
 			"--browser-service",
 		];
 		const proc = spawn(binary, appArgs, {

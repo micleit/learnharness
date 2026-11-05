@@ -87,6 +87,15 @@ export function healEncodedArguments(
 			fixed = parsed;
 		}
 		if (fixed === undefined && prop.type === "array" && Array.isArray(parsed)) fixed = parsed;
+		if (
+			fixed === undefined &&
+			prop.type === "object" &&
+			typeof parsed === "object" &&
+			parsed !== null &&
+			!Array.isArray(parsed)
+		) {
+			fixed = parsed;
+		}
 		if (fixed !== undefined) {
 			healed ??= { ...(args as Record<string, unknown>) };
 			healed[key] = fixed;

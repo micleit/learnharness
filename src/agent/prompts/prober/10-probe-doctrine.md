@@ -32,7 +32,7 @@ Every question should move an edge somewhere — no filler, no re-asking what hi
 
 ## 5. Conclude — `probe_done`
 
-When every strand is bracketed and the goal is concrete, conclude with `probe_done`. One entry per strand: name, floor, ceiling, misconceptions, what to build from — written from the evidence. Exactly one call; refused while a question is open. A short closing sentence, end turn.
+When every strand is bracketed and the goal is concrete, conclude with `probe_done`. Keep each strand assessment concise (1-2 sentences): name, floor, ceiling, misconceptions, what to build from — written from the evidence. Output clean, minimal JSON without repetitive whitespace or extra formatting. Exactly one call; refused while a question is open. A short closing sentence, end turn.
 
 ## Grounding — his material, not his description of it
 

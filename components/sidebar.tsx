@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { MenuShell } from "@/components/menu-shell";
 import { DeleteSessionDialog } from "@/components/delete-session-dialog";
 import type { ChatDeleteMode } from "@/src/core";
-import { DumbbellIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
+import { DumbbellIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PlusIcon, SearchIcon, SettingsIcon } from "lucide-react";
 import { ActivitySection } from "@/components/activity-dock";
 import { CoverageMenuBlock } from "@/components/extraction-coverage";
 import { LhMark } from "@/components/lh-mark";
@@ -238,6 +238,43 @@ export function SidebarToggle() {
 function SessionStatus({ busy }: { busy: boolean }) {
 	if (!busy) return null;
 	return <BrailleSpinner />;
+}
+
+function LogoutButton() {
+	const [authEnabled, setAuthEnabled] = useState(false);
+
+	useEffect(() => {
+		fetch("/api/auth/login")
+			.then((r) => r.json())
+			.then((data: { enabled?: boolean }) => {
+				if (data.enabled) setAuthEnabled(true);
+			})
+			.catch(() => {});
+	}, []);
+
+	if (!authEnabled) return null;
+
+	const handleLogout = async () => {
+		try {
+			await fetch("/api/auth/logout", { method: "POST" });
+		} finally {
+			window.location.href = "/login";
+		}
+	};
+
+	return (
+		<Hint label="Sign out" side="top">
+			<button
+				type="button"
+				onClick={handleLogout}
+				data-testid="logout-entry"
+				aria-label="Sign out"
+				className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+			>
+				<LogOutIcon className="size-3.5" />
+			</button>
+		</Hint>
+	);
 }
 
 /** Compact "how long ago": "just now", "5m ago", "3h ago", "2d ago",
@@ -846,7 +883,7 @@ function SessionsSidebar() {
 					{/* Settings entry (settings-app wave): same row language as
 					    New session — quiet, bottom-pinned, opens the centered
 					    dialog (also mod+, in the keyboard registry). */}
-					<div className="px-3 pb-3 pt-1">
+					<div className="flex items-center justify-between px-3 pb-3 pt-1">
 						<Hint label="Settings" action="open-settings" side="right">
 							<button
 								type="button"
@@ -858,6 +895,7 @@ function SessionsSidebar() {
 								Settings
 							</button>
 						</Hint>
+						<LogoutButton />
 					</div>
 				</div>
 

@@ -102,6 +102,34 @@
 	--lh-heading-weight: 900;
 }
 
+/* Gruvbox Material Light (Medium contrast). */
+.light {
+	color-scheme: light;
+	--background: #fbf1c7;
+	--foreground: #654735;
+	--card: #f2e5bc;
+	--card-foreground: #654735;
+	--popover: #f2e5bc;
+	--popover-foreground: #654735;
+	--primary: #654735;
+	--primary-foreground: #fbf1c7;
+	--secondary: #f2e5bc;
+	--secondary-foreground: #654735;
+	--muted: #f2e5bc;
+	--muted-foreground: #7c6f64;
+	--accent: #e5d5ad;
+	--accent-foreground: #654735;
+	--destructive: #c14a4a;
+	--border: #d5c4a1;
+	--input: #d5c4a1;
+	--ring: #a89984;
+	--lh-ink-strong: var(--foreground);
+	--lh-ink-italic: var(--foreground);
+	--lh-prose-size: 16px;
+	--lh-prose-leading: 1.5;
+	--lh-heading-weight: 900;
+}
+
 /* CMU Serif bold (titles) — bundled local file, no CDN dependency. */
 @font-face {
 	font-family: "lh-cmu";
@@ -336,6 +364,9 @@ body {
 	background: color-mix(in oklab, var(--background) 86%, black);
 	border-radius: 0.75rem;
 	padding: 0.375rem;
+}
+.light [data-streamdown="code-block"] {
+	background: var(--card);
 }
 [data-streamdown="code-block-header"] {
 	display: none;

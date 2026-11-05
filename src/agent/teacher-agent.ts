@@ -166,11 +166,10 @@ function makeQuestionStopper(kind: AgentKind) {
 				.map((c) => c.id!),
 		);
 		if (called.size === 0) return false;
-		// Stop only when every question/problem pose resolved cleanly.
-		for (const result of context.toolResults) {
-			if (called.has(result.toolCallId) && result.isError) return false;
-		}
-		return true;
+		// If at least one question/problem pose resolved cleanly, the question/problem
+		// is active and awaiting learner input — turn MUST stop immediately.
+		// Secondary/parallel calls that errored must NOT prevent stopping.
+		return context.toolResults.some((r) => called.has(r.toolCallId) && !r.isError);
 	};
 }
 

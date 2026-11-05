@@ -7,9 +7,7 @@
  * variables move IMMEDIATELY (the section's whole point — it must DO
  * something). Hex inputs commit on blur/Enter; the background derives the
  * raised/accent/edge palette in code (components/settings/appearance.tsx).
- * Mode is dark-only this wave: control rendered DISABLED with a note — the
- * light palette is the design wave's work, and a lying control is worse
- * than an honest disabled one.
+ * Mode switches between dark and Gruvbox Material Light.
  *
  * Graph graying (owner, 2026-09-20) follows the graph viewer's render-panel
  * convention: the whole row dims when a parent is off (stored values
@@ -186,19 +184,28 @@ export function AppearanceSection({
 
 	return (
 		<>
-			<SettingsRow label="Mode" hint="Coming soon" testid="row-mode" dimmed>
-				<ThinSelect value="dark" ariaLabel="mode" onChange={() => {}} testid="select-mode" disabled>
+			<SettingsRow label="Mode" testid="row-mode">
+				<ThinSelect
+					value={appearance?.mode ?? "dark"}
+					ariaLabel="mode"
+					onChange={(v) => {
+						const nextMode = v as "dark" | "light";
+						onSectionChange({ ...appearance, mode: nextMode, background: null });
+					}}
+					testid="select-mode"
+				>
 					<option value="dark">Dark</option>
+					<option value="light">Light</option>
 				</ThinSelect>
 			</SettingsRow>
 			<SettingsRow
 				label="Background"
-				hint={`Empty = ${resolved.background ?? "#141414"}`}
+				hint={`Empty = ${resolved.background ?? (resolved.mode === "light" ? "#fbf1c7" : "#141414")}`}
 				testid="row-background"
 			>
 				<CommitInput
 					value={appearance?.background ?? ""}
-					placeholder="#141414"
+					placeholder={resolved.mode === "light" ? "#fbf1c7" : "#141414"}
 					ariaLabel="background hex"
 					testid="input-background"
 					onCommit={(v) => onSectionChange({ ...appearance, background: v === "" ? null : v })}

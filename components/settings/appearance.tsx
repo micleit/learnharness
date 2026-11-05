@@ -22,12 +22,34 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FACTORY_SETTINGS, type AppearanceSettings } from "@/src/core";
 
+/** Factory dark and light default backgrounds. */
+export const FACTORY_DARK_BACKGROUND = "#141414";
+export const FACTORY_LIGHT_BACKGROUND = "#fbf1c7";
+
+/** Relative luminance (0 = black, 1 = white) for contrast validation. */
+function hexLuminance(hex: string): number {
+	const n = hex.length === 4
+		? hex.slice(1).split("").map((c) => parseInt(c + c, 16))
+		: [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+	const [r = 0, g = 0, b = 0] = n;
+	return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
 /** The resolved, fully-concrete appearance view (delta + factory merged). */
 export function resolveAppearance(delta: AppearanceSettings | undefined) {
 	const f = FACTORY_SETTINGS.appearance;
+	const mode = delta?.mode ?? f.mode;
+	let background = delta?.background ?? f.background;
+	// A custom background must match the active mode's polarity;
+	// a dark background (e.g. #000000 from dark mode) in light mode drops to the mode's default.
+	if (background !== null) {
+		const lum = hexLuminance(background);
+		if (mode === "light" && lum < 0.4) background = null;
+		else if (mode === "dark" && lum > 0.6) background = null;
+	}
 	return {
-		mode: delta?.mode ?? f.mode,
-		background: delta?.background ?? f.background,
+		mode,
+		background,
 		fontFamily: delta?.fontFamily ?? f.fontFamily,
 		proseFontSize: delta?.proseFontSize ?? f.proseFontSize,
 		sessionNameSerif: delta?.sessionNameSerif ?? f.sessionNameSerif,
@@ -50,11 +72,35 @@ function raise(hex: string, add: number): string {
 	return `#${n.map((c) => Math.min(255, c + add).toString(16).padStart(2, "0")).join("")}`;
 }
 
-/** The derived palette a chosen background implies (dark curve): background
- *  itself, the raised surfaces (card/popover/secondary/muted, +8), the
- *  accent (+22), the edges (border/input, +47), and primary-foreground
- *  (the inverted text on primary = the background's own color, as today). */
-export function derivedPalette(background: string): Record<string, string> {
+/** One channel clamped on the light curve: subtractive offsets for light mode. */
+function lower(hex: string, sub: number): string {
+	const n = hex.length === 4
+		? hex.slice(1).split("").map((c) => parseInt(c + c, 16))
+		: [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+	return `#${n.map((c) => Math.max(0, c - sub).toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** The derived palette a chosen background implies:
+ *  - dark curve: background itself, raised surfaces (+8), accent (+22), edges (+47), primary-foreground.
+ *  - light curve (Gruvbox Material Light): background itself, surfaces (-10), accent (-24), edges (-40). */
+export function derivedPalette(background: string, mode: "dark" | "light" = "dark"): Record<string, string> {
+	if (mode === "light") {
+		const isFactory = background.toLowerCase() === FACTORY_LIGHT_BACKGROUND;
+		const card = isFactory ? "#f2e5bc" : lower(background, 10);
+		const accent = isFactory ? "#e5d5ad" : lower(background, 24);
+		const border = isFactory ? "#d5c4a1" : lower(background, 40);
+		return {
+			"--background": background,
+			"--card": card,
+			"--popover": card,
+			"--secondary": card,
+			"--muted": card,
+			"--accent": accent,
+			"--border": border,
+			"--input": border,
+			"--primary-foreground": background,
+		};
+	}
 	const card = raise(background, 8);
 	const accent = raise(background, 22);
 	const border = raise(background, 47);
@@ -76,7 +122,7 @@ export function derivedPalette(background: string): Record<string, string> {
  *  exported for tests. */
 export function appearanceVars(a: ReturnType<typeof resolveAppearance>): Record<string, string> {
 	const vars: Record<string, string> = {};
-	if (a.background !== null) Object.assign(vars, derivedPalette(a.background));
+	if (a.background !== null) Object.assign(vars, derivedPalette(a.background, a.mode));
 	if (a.fontFamily !== null) {
 		vars["--font-prose"] = `"${a.fontFamily}", var(--font-sans3), ui-sans-serif, system-ui, sans-serif`;
 	}
@@ -123,12 +169,24 @@ export function useAppearance() {
 	return useContext(AppearanceContext);
 }
 
+const THEME_STORAGE_KEY = "lh:theme-mode";
+
 export function AppearanceProvider({ children }: { children: React.ReactNode }) {
-	const [delta, setDelta] = useState<AppearanceSettings | undefined>(undefined);
+	const [delta, setDelta] = useState<AppearanceSettings | undefined>(() => {
+		if (typeof window === "undefined") return undefined;
+		try {
+			const cached = window.localStorage.getItem(THEME_STORAGE_KEY);
+			if (cached === "dark" || cached === "light") {
+				return { mode: cached };
+			}
+		} catch {}
+		return undefined;
+	});
 	const appliedRef = useRef<string>("");
 
+	const resolved = useMemo(() => resolveAppearance(delta), [delta]);
 	// The vars apply on every change — stringified as the change signal.
-	const vars = useMemo(() => appearanceVars(resolveAppearance(delta)), [delta]);
+	const vars = useMemo(() => appearanceVars(resolved), [resolved]);
 	const key = useMemo(() => JSON.stringify(vars), [vars]);
 	// REMOVAL is half the job (owner repro, fix wave): a later write that
 	// OMITS a var (empty field = factory, serif toggle back on) must clear
@@ -138,9 +196,16 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 	// the factory stylesheet value returns.
 	const appliedNamesRef = useRef<Set<string>>(new Set());
 	useEffect(() => {
+		const root = document.documentElement;
+		root.classList.toggle("dark", resolved.mode === "dark");
+		root.classList.toggle("light", resolved.mode === "light");
+		root.style.colorScheme = resolved.mode;
+		try {
+			window.localStorage.setItem(THEME_STORAGE_KEY, resolved.mode);
+		} catch {}
+
 		if (appliedRef.current === key) return;
 		appliedRef.current = key;
-		const root = document.documentElement;
 		for (const name of staleVarNames([...appliedNamesRef.current], vars)) {
 			root.style.removeProperty(name);
 			appliedNamesRef.current.delete(name);
@@ -149,7 +214,7 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 			root.style.setProperty(name, value);
 			appliedNamesRef.current.add(name);
 		}
-	}, [key, vars]);
+	}, [key, vars, resolved.mode]);
 
 	// One fetch per app load: the record (sanitized server-side) carries the
 	// delta; resolution happens here against the compiled factory.
@@ -178,8 +243,8 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 	}, []);
 
 	const value = useMemo(
-		() => ({ appearance: resolveAppearance(delta), onAppearanceChange }),
-		[delta, onAppearanceChange],
+		() => ({ appearance: resolved, onAppearanceChange }),
+		[resolved, onAppearanceChange],
 	);
 	return <AppearanceContext.Provider value={value}>{children}</AppearanceContext.Provider>;
 }

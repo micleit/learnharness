@@ -275,12 +275,12 @@ describe("KeysSection (thin SSR)", () => {
 });
 
 describe("AppearanceSection (thin SSR)", () => {
-	it("mode is rendered DISABLED — dark-only this wave, no lying control", () => {
+	it("mode is rendered enabled with dark and light options", () => {
 		const html = renderToStaticMarkup(<AppearanceSection appearance={undefined} onSectionChange={() => {}} />);
-		assert.ok(tagOf(html, "select-mode").includes("disabled"), "mode select disabled");
-		assert.ok(html.includes("Coming soon"));
-		// The whole row dims, graph-view style (the control never adds its own).
-		assert.ok(tagOf(html, "row-mode").includes("opacity-40"), "mode row dims whole");
+		assert.ok(!tagOf(html, "select-mode").includes("disabled"), "mode select enabled");
+		assert.ok(html.includes("Dark"));
+		assert.ok(html.includes("Light"));
+		assert.ok(!tagOf(html, "row-mode").includes("opacity-40"), "mode row not dimmed");
 	});
 
 	it("hex inputs carry the factory placeholders; prose size resolves against the factory", () => {

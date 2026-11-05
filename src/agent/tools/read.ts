@@ -103,6 +103,9 @@ export const readTool: AgentTool<typeof readInput> = {
 	execute: serverExecute("read", readInput, async ({ path: rawPath, offset, limit }): Promise<string | ImageFileResult> => {
 		const absolute = resolveSourcePath(rawPath);
 		const ext = path.extname(absolute).toLowerCase();
+		if (ext === ".pdf") {
+			return `Cannot read binary PDF directly with 'read'. Use the 'pdf' tool on "${rawPath}" to inspect, search, or extract pages.`;
+		}
 		const mime = IMAGE_MIME[ext];
 		const buffer = await fs.readFile(absolute); // ENOENT/EACCES → error result the model sees
 		if (mime) {

@@ -58,6 +58,7 @@ export interface PracticeToolContext {
  *  this closure — the intra-turn truth the record cannot hold yet. */
 export interface PracticeGate {
 	problemActive: boolean;
+	posedThisTurn?: boolean;
 }
 
 /** Seed the turn's gate from the record (result-aware activeProblemOf —
@@ -102,7 +103,7 @@ export function problemTool(
 		name: "problem",
 		label: "problem",
 		description:
-			"Pose one practice problem. Ends the turn — the learner works in the thinking field; their thinking " +
+			"Pose one practice problem. Pose EXACTLY ONE problem per turn — NEVER call this tool multiple times in parallel or in the same turn. Ends the turn — the learner works in the thinking field; their thinking " +
 			"traces and answer commits arrive back as labeled messages. The modelSolution rides this call's " +
 			"arguments and stays hidden from the learner until you conclude (conclude shows it verbatim — the " +
 			"reveal needs no new field). Only one problem may be active — conclude it before posing the next.",
@@ -155,6 +156,7 @@ export function problemTool(
 				}
 			}
 			gate.problemActive = true;
+			gate.posedThisTurn = true;
 			return problemResult();
 		},
 	};
@@ -212,6 +214,11 @@ export function concludeTool(gate: PracticeGate): AgentTool<typeof concludeInput
 		execute: async (_toolCallId, _input) => {
 			if (!gate.problemActive) {
 				return invalidInputResult("conclude", ["no active problem to conclude — pose one first"]);
+			}
+			if (gate.posedThisTurn) {
+				return invalidInputResult("conclude", [
+					"cannot conclude a problem in the same turn it was posed — wait for the learner's answer",
+				]);
 			}
 			gate.problemActive = false;
 			return concludeResult();
