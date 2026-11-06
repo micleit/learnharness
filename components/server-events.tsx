@@ -36,6 +36,13 @@ export interface NotifySource {
 }
 
 export function openEventsChannel(): NotifySource {
+	if (typeof window !== "undefined" && window.location.pathname === "/login") {
+		return {
+			close: () => {},
+			onOpen: () => {},
+			onEvent: () => {},
+		};
+	}
 	const es = new EventSource("/api/events");
 	return {
 		close: () => es.close(),

@@ -219,11 +219,12 @@ export function AppearanceProvider({ children }: { children: React.ReactNode }) 
 	// One fetch per app load: the record (sanitized server-side) carries the
 	// delta; resolution happens here against the compiled factory.
 	useEffect(() => {
+		if (typeof window !== "undefined" && window.location.pathname === "/login") return;
 		let alive = true;
 		fetch("/api/settings")
-			.then((r) => r.json())
-			.then((body: { settings?: Record<string, unknown> }) => {
-				if (!alive) return;
+			.then((r) => (r.ok ? r.json() : null))
+			.then((body: { settings?: Record<string, unknown> } | null) => {
+				if (!alive || !body) return;
 				// The record arrives sanitized server-side; the appearance
 				// slice is unknown-shaped here, so it goes through the same
 				// resolve (absent/invalid fields = factory anyway).

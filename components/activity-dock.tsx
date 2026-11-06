@@ -102,6 +102,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
 	useEffect(() => {
+		if (typeof window !== "undefined" && window.location.pathname === "/login") return;
 		let alive = true;
 		void (async () => {
 			try {

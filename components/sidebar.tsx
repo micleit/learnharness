@@ -475,8 +475,12 @@ function SessionsSidebar() {
 		refreshInFlightRef.current = true;
 		try {
 			const res = await fetch("/api/chats", { cache: "no-store" });
-			const d = (await res.json()) as { chats: ChatListItem[] };
-			setChats(d.chats);
+			if (res.ok) {
+				const d = (await res.json()) as { chats?: ChatListItem[] };
+				setChats(d.chats ?? []);
+			} else {
+				setChats([]);
+			}
 		} catch {
 			// a transient failure keeps the last snapshot
 			setChats((prev) => prev ?? []);
@@ -979,6 +983,11 @@ function SessionsSidebar() {
 
 /** The app frame: sidebar inline + content. Rendered once in the root layout. */
 export function AppShell({ children }: { children: React.ReactNode }) {
+	const pathname = usePathname();
+	if (pathname === "/login") {
+		return <main className="min-w-0 flex-1">{children}</main>;
+	}
+
 	return (
 		<SettingsDialogProvider>
 			<SessionsSidebar />
